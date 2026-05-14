@@ -8,6 +8,28 @@ import java.util.Map;
 import static com.sam6fa50.lox.TokenType.*;
 
 class Scanner {
+    private static final Map<String, TokenType> keywords;
+
+    static {
+        keywords = new HashMap<>();
+        keywords.put("and", AND);
+        keywords.put("class", CLASS);
+        keywords.put("else", ELSE);
+        keywords.put("false", FALSE);
+        keywords.put("fun", FUN);
+        keywords.put("for", FOR);
+        keywords.put("if", IF);
+        keywords.put("nil", NIL);
+        keywords.put("or", OR);
+        keywords.put("print", PRINT);
+        keywords.put("return", RETURN);
+        keywords.put("super", SUPER);
+        keywords.put("this", THIS);
+        keywords.put("true", TRUE);
+        keywords.put("var", VAR);
+        keywords.put("while", WHILE);
+    }
+
     private final String source;
     private final List<Token> tokens = new ArrayList<>();
     private int line = 1;
@@ -64,6 +86,16 @@ class Scanner {
 
     private boolean isDigit(char c) {
         return c >= '0' && c <= '9';
+    }
+
+    private boolean isAlpha(char c) {
+        return (c >= 'A' && c <= 'Z') ||
+                (c >= 'a' && c <= 'z') ||
+                c == '_';
+    }
+
+    private boolean isAlphaNumeric(char c) {
+        return isAlpha(c) || isDigit(c);
     }
 
     private void addToken(TokenType type) {
@@ -150,9 +182,12 @@ class Scanner {
             case '"':
                 string();
                 break;
+
             default:
                 if (isDigit(c)) {
                     number();
+                } else if (isAlpha(c)) {
+                    identifier();
                 } else {
                     Lox.error(line, "Unexpected Character");
                 }
@@ -193,5 +228,16 @@ class Scanner {
         // Process the string to remove the surrounding quotes
         String value = source.substring(start + 1, current - 1);
         addToken(STRING, value);
+    }
+
+    private void identifier() {
+        while (isAlphaNumeric(peek())) advance();
+
+        String text = source.substring(start, current);
+        TokenType type = keywords.get(text);
+
+        // If it's not in the map, it must be a user defined identifier (variable, function, etc.) so handle that later
+        if (type == null) type = IDENTIFIER;
+        addToken(type);
     }
 }

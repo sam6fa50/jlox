@@ -1,7 +1,7 @@
 package com.sam6fa50.lox;
 
 import java.util.ArrayList;
-=import java.util.HashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -10,7 +10,7 @@ import static com.sam6fa50.lox.TokenType.*;
 class Scanner {
     private final String source;
     private final List<Token> tokens = new ArrayList<>();
-    private final int line = 1;
+    private int line = 1;
     private int current = 0;
     private int start = 0;
 
@@ -24,6 +24,7 @@ class Scanner {
             scanToken();
         }
 
+        // Finished with file, submit EOF token
         tokens.add(new Token(EOF, "", null, line));
         return tokens;
     }
@@ -33,7 +34,36 @@ class Scanner {
     }
 
     private char advance() {
-        return source.charAt(current++); // Increment to the next character, and return the current character
+        // Increment to the next character, and return the current character (pre-incremented character)
+        return source.charAt(current++);
+    }
+
+    private boolean match(char expected) {
+        if (isAtEnd()) return false;
+        if (source.charAt(current) != expected) return false;
+
+        // Update current value only if we find the next character (post advance()) to combine with
+        // the character advance() consumed to produce a two-character lexeme
+        current++;
+        return true;
+    }
+
+    /// These two peeking functions exist to peek for the next character or next 2 characters respectively without
+    /// actually consuming the character. The reason for not having peek() support
+    private char peek() {
+        // Return null character if at end of file
+        if (isAtEnd()) return '\0';
+        return source.charAt(current);
+    }
+
+    private char peekNext() {
+        // Return null character if we're at the end of the file right now and there does not exist a character after
+        if ((current + 1) > source.length()) return '\0';
+        return source.charAt(current + 1);
+    }
+
+    private boolean isDigit(char c) {
+        return c >= '0' && c <= '9';
     }
 
     private void addToken(TokenType type) {
@@ -74,14 +104,21 @@ class Scanner {
             case '+':
                 addToken(PLUS);
                 break;
-            case '/':
-                addToken(SLASH);
-                break;
             case ';':
                 addToken(SEMICOLON);
                 break;
             case '*':
                 addToken(STAR);
+                break;
+
+            // Whitespace and newline
+            case ' ':
+            case '\r':
+            case '\t':
+                break;
+
+            case '\n':
+                line++;
                 break;
 
             // Two character lexemes
@@ -97,20 +134,64 @@ class Scanner {
             case '>':
                 addToken(match('<') ? GREATER_EQUAL : GREATER);
                 break;
+
+            // Operators with more complicated handling
+            case '/':
+                if (match('/')) {
+                    // This implicates the beginning of a comment, so peeking until we hit a new line, or
+                    // we hit the end of the file; doing nothing with the comment data, just advancing the current
+                    // pointer
+                    while (peek() != '\n' && !isAtEnd()) advance();
+                } else {
+                    // Otherwise, if we don't see another '/', we know that this is just a division operator
+                    addToken(SLASH);
+                }
+                break;
+            case '"':
+                string();
+                break;
             default:
-                Lox.error(line, "Unexpected Character");
+                if (isDigit(c)) {
+                    number();
+                } else {
+                    Lox.error(line, "Unexpected Character");
+                }
                 break;
         }
     }
 
-    private boolean match(char expected) {
-        if (isAtEnd()) return false;
-        if (source.charAt(current) != expected) return false;
+    private void number() {
+        while (isDigit(peek())) advance();
 
-        // Update current value only if we find the next character (post advance()) to combine with
-        // the character advance() consumed to produce a two-character lexeme
-        current++;
-        return true;
+        // Check for decimal
+        if (peek() == '.' && isDigit(peekNext())) {
+            // Consume the '.'
+            advance();
+
+            // This design ensures only one possible decimal, next decimal must be a dot operator on the
+            // finished number
+            while (isDigit(peek())) advance();
+        }
+
+        addToken(NUMBER,
+                Double.parseDouble(source.substring(start, current)));
     }
 
+    private void string() {
+        while (peek() != '"' && !isAtEnd()) {
+            if (peek() == '\n') line++; // Continue processing next line in source code while producing a string
+            advance();
+        }
+
+        if (isAtEnd()) {
+            Lox.error(line, "Unterminated string.");
+            return;
+        }
+
+        advance(); // Consume the closing '"' character
+
+        // Process the string to remove the surrounding quotes
+        String value = source.substring(start + 1, current - 1);
+        addToken(STRING, value);
+    }
 }

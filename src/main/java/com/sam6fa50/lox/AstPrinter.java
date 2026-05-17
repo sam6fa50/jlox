@@ -1,5 +1,8 @@
 package com.sam6fa50.lox;
 
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
 public class AstPrinter implements Expr.Visitor<String> {
     static void main() {
         Expr expression = new Expr.Binary(
@@ -38,17 +41,9 @@ public class AstPrinter implements Expr.Visitor<String> {
     }
 
     private String parenthesize(String name, Expr... exprs) {
-        StringBuilder builder = new StringBuilder();
-
-        builder.append("(").append(name);
-
-        for (Expr expr : exprs) {
-            builder.append(" ").append(expr.accept(this));
-        }
-
-        builder.append(")");
-
-        return builder.toString();
+        return '(' + name + Arrays.stream(exprs)
+                .map(expr -> expr.accept(this))
+                .collect(Collectors.joining(" ", " ", ")"));
     }
 
 }

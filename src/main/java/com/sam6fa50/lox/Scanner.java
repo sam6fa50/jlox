@@ -10,6 +10,7 @@ import static com.sam6fa50.lox.TokenType.*;
 class Scanner {
     private static final Map<String, TokenType> keywords;
 
+    // HasMap to represent all complex tokens save for identifier, number, and string
     static {
         keywords = new HashMap<>();
         keywords.put("and", AND);
@@ -51,15 +52,20 @@ class Scanner {
         return tokens;
     }
 
+    // Check if we're at the end by seeing if our index to scan is at least equal to the length of the source code.
     private boolean isAtEnd() {
         return current >= source.length();
     }
 
+    // Increment to the next character, and return the current character (pre-incremented character)
     private char advance() {
-        // Increment to the next character, and return the current character (pre-incremented character)
         return source.charAt(current++);
     }
 
+    // This function is called when wanting to match a second character for two-character tokens. It checks if the
+    // current character (the one after the token that invites possibility of a two-character token) matches with what
+    // we're testing for (for example, for = we match = to test for ==). If we find that it matches, we advance
+    // our position and return true. Otherwise, we leave our position index untouched and return false.
     private boolean match(char expected) {
         if (isAtEnd()) return false;
         if (source.charAt(current) != expected) return false;
@@ -102,11 +108,15 @@ class Scanner {
         addToken(type, null);
     }
 
+    // This adds the token with the text value of the token (lexeme), being the characters that identify it
     private void addToken(TokenType type, Object literal) {
         String text = source.substring(start, current);
         tokens.add(new Token(type, text, literal, line));
     }
 
+    // This method actually constructs the tokens to add to the final token list by switching on the current character,
+    // checking to see if it matches any common one - two character types, and for above that, utilizing helpers and
+    // iteratively scanning beyond just the first two characters as needed
     private void scanToken() {
         char c = advance();
 
@@ -195,6 +205,9 @@ class Scanner {
         }
     }
 
+    // This method constructs a number token that is a float by the nature of lox by scanning until the digit is NOT
+    // numerical, or a period. If it finds a period, it consumes the period and continues reading until a non-digit non-
+    // period is found
     private void number() {
         while (isDigit(peek())) advance();
 
@@ -212,6 +225,7 @@ class Scanner {
                 Double.parseDouble(source.substring(start, current)));
     }
 
+    // This method constructs a string token by advancing current to the point that we see a quote to terminate
     private void string() {
         while (peek() != '"' && !isAtEnd()) {
             if (peek() == '\n') line++; // Continue processing next line in source code while producing a string
@@ -225,11 +239,14 @@ class Scanner {
 
         advance(); // Consume the closing '"' character
 
-        // Process the string to remove the surrounding quotes
+        // Process the string to discard the surrounding quotes
         String value = source.substring(start + 1, current - 1);
         addToken(STRING, value);
     }
 
+    // This method constructs an identifier by advancing current to the point that we see the symbol is no longer
+    // alphanumeric. This allows for other language constructs to take place; eg var a = 5; and var a=5; are equally
+    // valid
     private void identifier() {
         while (isAlphaNumeric(peek())) advance();
 

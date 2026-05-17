@@ -13,12 +13,14 @@ abstract class Expr {
         R visitLiteralExpr(Literal expr);
 
         R visitUnaryExpr(Unary expr);
+
     }
 
     static class Binary extends Expr {
         final Expr left;
         final Token operator;
         final Expr right;
+
         Binary(Expr left, Token operator, Expr right) {
             this.left = left;
             this.operator = operator;
@@ -71,4 +73,5 @@ abstract class Expr {
             return visitor.visitUnaryExpr(this);
         }
     }
+
 }

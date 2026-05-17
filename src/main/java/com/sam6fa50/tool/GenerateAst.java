@@ -7,21 +7,30 @@ import java.util.Arrays;
 import java.util.List;
 
 public class GenerateAst {
+    private static final List<String> Exprs = Arrays.asList(
+            "Assign   : Token name, Expr value",
+            "Binary   : Token operator, Expr left, Expr right",
+            "Ternary  : Expr condition, Expr left, Expr right",
+            "Grouping : Expr expression",
+            "Literal  : Object value",
+            "Unary    : Token operator, Expr right",
+            "Variable : Token name"
+    );
+
+    private static final List<String> Stmts = Arrays.asList(
+            "Block      : List<Stmt> statements",
+            "Expression : Expr expression",
+            "Print      : Expr expression",
+            "Var        : Token name, Expr initializer"
+    );
+
     static void main(String[] args) throws IOException {
         if (args.length != 1) {
             System.err.println("Usage: generate_ast <output directory>");
             System.exit(64);
         }
         String outputDir = args[0];
-        defineAst(outputDir, "Expr", Arrays.asList(
-                "Assign   : Token name, Expr value",
-                "Binary   : Token operator, Expr left, Expr right",
-                "Ternary  : Expr condition, Expr left, Expr right",
-                "Grouping : Expr expression",
-                "Literal  : Object value",
-                "Unary    : Token operator, Expr right",
-                "Variable : Token name"
-        ));
+        defineAst(outputDir, "Stmt", Stmts);
     }
 
     private static void defineAst
@@ -88,6 +97,14 @@ public class GenerateAst {
         writer.println("    }");
     }
 
+    // The visitor pattern's entire point is to decouple data from functionality. It says that hey, since we're in a
+    // OOP-only language, we do need to have functionality in the data to trigger its usage, and that's what 'accept' is
+    // for, but the actual implementation of the usage should be governed by the user of the data. So a parser would
+    // use the data differently than an interpreter, and so on so forth. It evaluates as follows:
+    // (Expected return type) visited.accept(Visitor<Expected return type>: visitor); // Which returns
+    // (Expected return type) visitor.visitVisited(visited Type: this);
+    // visitor then goes and consumes it as needed, example print function would do something like:
+    // String visitVisited { System.out.println(visited.name); }
     private static void defineVisitor(PrintWriter writer, String baseName, List<String> types) {
         writer.println("    interface Visitor<R> {");
 

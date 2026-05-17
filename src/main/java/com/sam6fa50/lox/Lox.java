@@ -41,8 +41,16 @@ public class Lox {
 
             if (line == null) break;
 
-            run(line);
-            hadError = false;
+            // Treat lines ending without semicolons in the REPL as expressions; wrap into statements with print
+            if (line.charAt(line.length() - 1) != ';') {
+                line = "print " + line + ";";
+            }
+
+            try {
+                run(line);
+            } catch (NullPointerException error) {
+                hadError = false;
+            }
         }
     }
 
@@ -57,6 +65,7 @@ public class Lox {
         interpreter.interpret(statements);
     }
 
+    // These are syntax errors, so they're kept in the main class. (non-runtime errors)
     static void error(int line, String message) {
         report(line, "", message);
     }

@@ -118,7 +118,7 @@ public class Parser {
 
     // Assignment operator for redefining a variable
     private Expr assignment() {
-        // Evaluate the left hand side all the way down to a primary; and if it's a variable, use it as an l-value (storage)
+        // Evaluate the left hand side all the way down to a primary (identifier); and if it's a variable, use it as an l-value (storage)
         Expr expr = ternary();
 
         if (match(EQUAL)) {
@@ -229,7 +229,7 @@ public class Parser {
     }
 
     // If we have a primary expression, we check if it becomes a literal, or if it can be upgraded to a nested expression
-    // on the right end
+    // on the right end. This is the very first thing we check for.
     private Expr primary() {
         if (match(FALSE)) return new Expr.Literal(false);
         if (match(TRUE)) return new Expr.Literal(true);
@@ -257,6 +257,8 @@ public class Parser {
 
     /// STATEMENTS
 
+
+    // Variable declarations lowest precedence; happen last
     private Stmt declaration() {
         try {
             if (match(VAR)) return varDeclaration();
@@ -268,8 +270,10 @@ public class Parser {
         }
     }
 
+    // All other statements occur at higher precedence.
     private Stmt statement() {
         if (match(PRINT)) return printStatement();
+        if (match(LEFT_BRACE)) return new Stmt.Block(block());
 
         return expressionStatement();
     }
@@ -280,6 +284,16 @@ public class Parser {
         return new Stmt.Print(value);
     }
 
+    // Atomic expression statement builder
+    private Stmt expressionStatement() {
+        Expr expr = expression();
+        consume(SEMICOLON, "Expect ';' after expression.");
+        return new Stmt.Expression(expr);
+    }
+
+    // Declaration helper to declare a variable. We then return a variable definition statement which is consumed as
+    // a statement. Whilst parsing, we return a variable with an empty (null) value, so that it can be REFERRED to
+    // without being used.
     private Stmt varDeclaration() {
         Token name = consume(IDENTIFIER, "Expect variable name.");
 
@@ -292,11 +306,18 @@ public class Parser {
         return new Stmt.Var(name, initializer);
     }
 
-    private Stmt expressionStatement() {
-        Expr expr = expression();
-        consume(SEMICOLON, "Expect ';' after expression.");
-        return new Stmt.Expression(expr);
+    // Block helper for constructing statements until a '}' is consumed
+    private List<Stmt> block() {
+        List<Stmt> statements = new ArrayList<>();
+        // We are still in a block
+        while (!check(RIGHT_BRACE) && !isAtEnd()) {
+            statements.add(declaration());
+        }
+
+        consume(RIGHT_BRACE, "Expect ';' after block.");
+        return statements;
     }
+
 
     // Purpose of ParseError class is to represent parser errors as objects that we can use to get the parser back on
     // track rather than actually throwing a Java error that breaks our program loop. Based on its contents, we decide

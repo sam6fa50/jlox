@@ -3,7 +3,7 @@ package com.sam6fa50.lox;
 import java.util.List;
 
 public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
-    private final Environment environment = new Environment();
+    private Environment environment = new Environment();
 
     // Public API to interpreter
     void interpret(List<Stmt> statements) {
@@ -174,12 +174,23 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         stmt.accept(this);
     }
 
+    // The block statement serves as our scope encapsulator, it's primary purpose is to group statements under a sub-scope
+    @Override
+    public Void visitBlockStmt(Stmt.Block stmt) {
+        executeBlock(stmt.statements, new Environment(environment));
+
+        return null;
+    }
+
+    // This is the atomic statement, it bridges the gap between statements and expressions. Expression statements are
+    // statements that are constructed by ending off with ';'
     @Override
     public Void visitExpressionStmt(Stmt.Expression stmt) {
         evaluate(stmt.expression);
         return null;
     }
 
+    // Primitive statement which evaluates to an expression, and yields its value to stdout
     @Override
     public Void visitPrintStmt(Stmt.Print stmt) {
         Object value = evaluate(stmt.expression);
@@ -187,11 +198,31 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         return null;
     }
 
+    // The visitVarStmt visitor actually evaluates the initializer, meaning complete declaration occurs when parsing, so
+    // you cannot refer to uncreated variables to define new variables, because by design definition statements immediately
+    // evaluate the variable expression
     @Override
     public Void visitVarStmt(Stmt.Var stmt) {
-        Object value = (stmt.initializer != null) ? evaluate(stmt.initializer) : null;
+        Object value = (stmt.initializer != null) ? evaluate(stmt.initializer) : new UndefinedIdentifier();
 
         environment.define(stmt.name.lexeme(), value);
         return null;
+    }
+
+    // Execute the statements living in a block; one by one.
+    void executeBlock(List<Stmt> statements, Environment environment) {
+        Environment previous = this.environment;
+        try {
+            this.environment = environment;
+
+            for (Stmt statement : statements) {
+                statement.accept(this);
+            }
+        } finally {
+            this.environment = previous;
+        }
+    }
+
+    static class UndefinedIdentifier {
     }
 }

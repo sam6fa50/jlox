@@ -1,5 +1,6 @@
 package com.sam6fa50.lox;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static com.sam6fa50.lox.TokenType.*;
@@ -13,12 +14,13 @@ public class Parser {
         this.tokens = tokens;
     }
 
-    Expr parse() {
-        try {
-            return expression();
-        } catch (ParseError error) {
-            return null;
+    List<Stmt> parse() {
+        List<Stmt> statements = new ArrayList<>();
+        while (!isAtEnd()) {
+            statements.add(declaration());
         }
+
+        return statements;
     }
 
     // Check if the current token is of the expected type, then go to the next token
@@ -97,18 +99,42 @@ public class Parser {
     // We follow precedence rules, so the last way we want to treat an expression is as an equality, and check if we need
     // to upgrade it to beyond.
 
+    /// EXPRESSIONS
+
     // TODO: Implement Comma Operator
     private Expr expression() {
         // After making the AST for the left side, we still need to execute it. Therefore, we
         // can't drop it, but instead must include it somehow, possible through a binary? Will return to this later
-        Expr expr = ternary();
+        Expr expr = assignment();
 
         if (match(COMMA)) {
             Token operator = previous();
             Expr right = expression();
-            expr = new Expr.Binary(expr, operator, right);
+            expr = new Expr.Binary(operator, expr, right);
         }
 
+        return expr;
+    }
+
+    // Assignment operator for redefining a variable
+    private Expr assignment() {
+        // Evaluate the left hand side all the way down to a primary; and if it's a variable, use it as an l-value (storage)
+        Expr expr = ternary();
+
+        if (match(EQUAL)) {
+            Token equals = previous();
+            // right-recursively evaluate the right hand side all the way down to a primary to start assigning right to
+            // left (treat as any possible statement including assignment; r-value); let act as an assignment don't
+            // assume otherwise, let interpreter figure it out.
+            Expr value = assignment();
+
+            if (expr instanceof Expr.Variable) {
+                Token name = ((Expr.Variable) expr).name;
+                return new Expr.Assign(name, value);
+            }
+
+            throw error(equals, "Invalid assignment target.");
+        }
         return expr;
     }
 
@@ -141,7 +167,7 @@ public class Parser {
         while (match(BANG_EQUAL, EQUAL_EQUAL)) {
             Token operator = previous(); // The previous token that was the operator
             Expr right = comparison(); // Logic is, consume the next tokens recursively as the right side after the operator
-            expr = new Expr.Binary(expr, operator, right);
+            expr = new Expr.Binary(operator, expr, right);
         }
 
         // If there is no right side, just return this expression up as it's the processed result of the recursion down
@@ -157,7 +183,7 @@ public class Parser {
         while (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
             Token operator = previous();
             Expr right = term();
-            expr = new Expr.Binary(expr, operator, right);
+            expr = new Expr.Binary(operator, expr, right);
         }
 
         // If there is no right side, just return this expression up as it's the processed result of the recursion down
@@ -172,7 +198,7 @@ public class Parser {
         while (match(MINUS, PLUS)) {
             Token operator = previous();
             Expr right = factor();
-            expr = new Expr.Binary(expr, operator, right);
+            expr = new Expr.Binary(operator, expr, right);
         }
 
         return expr;
@@ -185,7 +211,7 @@ public class Parser {
         while (match(SLASH, STAR)) {
             Token operator = previous();
             Expr right = unary();
-            expr = new Expr.Binary(expr, operator, right);
+            expr = new Expr.Binary(operator, expr, right);
         }
 
         return expr;
@@ -221,8 +247,55 @@ public class Parser {
             return new Expr.Grouping(expr);
         }
 
+        if (match(IDENTIFIER)) {
+            return new Expr.Variable(previous());
+        }
+
         // If we literally find no expression at the end, we throw an error.
         throw error(peek(), "Expect expression.");
+    }
+
+    /// STATEMENTS
+
+    private Stmt declaration() {
+        try {
+            if (match(VAR)) return varDeclaration();
+
+            return statement();
+        } catch (ParseError error) {
+            synchronize();
+            return null;
+        }
+    }
+
+    private Stmt statement() {
+        if (match(PRINT)) return printStatement();
+
+        return expressionStatement();
+    }
+
+    private Stmt printStatement() {
+        Expr value = expression();
+        consume(SEMICOLON, "Expect ';' after value.");
+        return new Stmt.Print(value);
+    }
+
+    private Stmt varDeclaration() {
+        Token name = consume(IDENTIFIER, "Expect variable name.");
+
+        Expr initializer = null;
+        if (match(EQUAL)) {
+            initializer = expression();
+        }
+
+        consume(SEMICOLON, "Expect ';' after initializer.");
+        return new Stmt.Var(name, initializer);
+    }
+
+    private Stmt expressionStatement() {
+        Expr expr = expression();
+        consume(SEMICOLON, "Expect ';' after expression.");
+        return new Stmt.Expression(expr);
     }
 
     // Purpose of ParseError class is to represent parser errors as objects that we can use to get the parser back on

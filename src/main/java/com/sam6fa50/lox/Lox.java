@@ -9,6 +9,8 @@ import java.nio.file.Paths;
 import java.util.List;
 
 public class Lox {
+    private static final Interpreter interpreter = new Interpreter();
+    static boolean hadRuntimeError = false;
     static boolean hadError = false;
 
     static void main(String[] args) throws IOException {
@@ -27,6 +29,7 @@ public class Lox {
         run(new String(bytes, Charset.defaultCharset()));
 
         if (hadError) System.exit(65);
+        if (hadRuntimeError) System.exit(70);
     }
 
     private static void runPrompt() throws IOException {
@@ -47,13 +50,11 @@ public class Lox {
         Scanner scanner = new Scanner(source);
         List<Token> tokens = scanner.scanTokens();
         Parser parser = new Parser(tokens);
-        Expr expression = parser.parse();
+        List<Stmt> statements = parser.parse();
 
-        if (hadError) {
-            return;
-        }
+        if (hadError) return;
 
-        System.out.println(new AstPrinter().print(expression));
+        interpreter.interpret(statements);
     }
 
     static void error(int line, String message) {
@@ -61,14 +62,21 @@ public class Lox {
     }
 
     private static void report(int line, String where, String message) {
-        System.err.println("[line " + line + " ] Error " + where + ": " + message);
+        System.err.println("[line " + line + "] Error " + where + ": " + message);
     }
 
+    // Scan/Parse time errors
     static void error(Token token, String message) {
         if (token.type() == TokenType.EOF) {
             report(token.line(), "at end", message);
         } else {
             report(token.line(), " at '" + token.lexeme() + "'", message);
         }
+    }
+
+    // Runtime Errors
+    static void runtimeError(RuntimeError error) {
+        System.err.println(error.getMessage() + "\n[line " + error.token.line() + "]");
+        hadRuntimeError = true;
     }
 }

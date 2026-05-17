@@ -6,8 +6,8 @@ import java.util.stream.Collectors;
 public class AstPrinter implements Expr.Visitor<String> {
     static void main() {
         Expr expression = new Expr.Binary(
-                new Expr.Unary(new Token(TokenType.MINUS, "-", null, 1), new Expr.Literal(123)),
                 new Token(TokenType.STAR, "*", null, 1),
+                new Expr.Unary(new Token(TokenType.MINUS, "-", null, 1), new Expr.Literal(123)),
                 new Expr.Grouping(new Expr.Literal(45.67))
         );
 
@@ -16,6 +16,11 @@ public class AstPrinter implements Expr.Visitor<String> {
 
     String print(Expr expr) {
         return expr.accept(this);
+    }
+
+    @Override
+    public String visitAssignExpr(Expr.Assign expr) {
+        return "";
     }
 
     @Override
@@ -43,6 +48,11 @@ public class AstPrinter implements Expr.Visitor<String> {
     @Override
     public String visitUnaryExpr(Expr.Unary expr) {
         return parenthesize(expr.operator.lexeme(), expr.right);
+    }
+
+    @Override
+    public String visitVariableExpr(Expr.Variable expr) {
+        return parenthesize(expr.name.lexeme(), expr);
     }
 
     private String parenthesize(String name, Expr... exprs) {

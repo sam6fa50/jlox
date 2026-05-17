@@ -121,72 +121,35 @@ class Scanner {
         char c = advance();
 
         switch (c) {
-            // One character lexemes
-            case '(':
-                addToken(LEFT_PAREN);
-                break;
-            case ')':
-                addToken(RIGHT_PAREN);
-                break;
-            case '{':
-                addToken(LEFT_BRACE);
-                break;
-            case '}':
-                addToken(RIGHT_BRACE);
-                break;
-            case ',':
-                addToken(COMMA);
-                break;
-            case '.':
-                addToken(DOT);
-                break;
-            case '-':
-                addToken(MINUS);
-                break;
-            case '+':
-                addToken(PLUS);
-                break;
-            case ';':
-                addToken(SEMICOLON);
-                break;
-            case '*':
-                addToken(STAR);
-                break;
+            // Primitive
+            case '(' -> addToken(TokenType.LEFT_PAREN);
+            case ')' -> addToken(TokenType.RIGHT_PAREN);
+            case '{' -> addToken(TokenType.LEFT_BRACE);
+            case '}' -> addToken(TokenType.RIGHT_BRACE);
+            case ',' -> addToken(TokenType.COMMA);
+            case '.' -> addToken(TokenType.DOT);
+            case '-' -> addToken(TokenType.MINUS);
+            case '+' -> addToken(TokenType.PLUS);
+            case ';' -> addToken(TokenType.SEMICOLON);
+            case '*' -> addToken(TokenType.STAR);
 
-            // Ternary Operator
-            case '?':
-                addToken(QUESTION);
-                break;
-            case ':':
-                addToken(COLON);
-                break;
+            // Ternary
+            case '?' -> addToken(TokenType.QUESTION);
+            case ':' -> addToken(TokenType.COLON);
 
-            // Whitespace and newline
-            case ' ':
-            case '\r':
-            case '\t':
-                break;
-
-            case '\n':
-                line++;
-                break;
+            // Whitespace/newline
+            case ' ', '\r', '\t' -> {
+            }
+            case '\n' -> line++;
 
             // Two character lexemes
-            case '!':
-                addToken(match('=') ? BANG_EQUAL : BANG);
-                break;
-            case '=':
-                addToken(match('=') ? EQUAL_EQUAL : EQUAL);
-                break;
-            case '<':
-                addToken(match('=') ? LESS_EQUAL : LESS);
-                break;
-            case '>':
-                addToken(match('<') ? GREATER_EQUAL : GREATER);
-                break;
+            case '!' -> addToken(match('=') ? BANG_EQUAL : BANG);
+            case '=' -> addToken(match('=') ? EQUAL_EQUAL : EQUAL);
+            case '>' -> addToken(match('=') ? GREATER_EQUAL : GREATER);
+            case '<' -> addToken(match('=') ? LESS_EQUAL : LESS);
 
-            // Operators with more complicated handling
-            case '/':
+            // Complex lexemes:
+            case '/' -> {
                 if (match('/')) {
                     // This implicates the beginning of a comment, so peeking until we hit a new line, or
                     // we hit the end of the file; doing nothing with the comment data, just advancing the current
@@ -196,12 +159,11 @@ class Scanner {
                     // Otherwise, if we don't see another '/', we know that this is just a division operator
                     addToken(SLASH);
                 }
-                break;
-            case '"':
-                string();
-                break;
+            }
 
-            default:
+            case '"' -> string();
+
+            default -> {
                 if (isDigit(c)) {
                     number();
                 } else if (isAlpha(c)) {
@@ -209,7 +171,7 @@ class Scanner {
                 } else {
                     Lox.error(line, "Unexpected Character");
                 }
-                break;
+            }
         }
     }
 

@@ -153,6 +153,14 @@ class Scanner {
                 addToken(STAR);
                 break;
 
+            // Ternary Operator
+            case '?':
+                addToken(QUESTION);
+                break;
+            case ':':
+                addToken(COLON);
+                break;
+
             // Whitespace and newline
             case ' ':
             case '\r':

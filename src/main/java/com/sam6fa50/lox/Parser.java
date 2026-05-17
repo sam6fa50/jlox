@@ -21,12 +21,6 @@ public class Parser {
         }
     }
 
-    // We follow precedence rules, so the last way we want to treat an expression is as an equality, and check if we need
-    // to upgrade it to beyond.
-    private Expr expression() {
-        return equality();
-    }
-
     // Check if the current token is of the expected type, then go to the next token
     private boolean match(TokenType... types) {
         for (TokenType type : types) {
@@ -98,6 +92,44 @@ public class Parser {
 
             advance();
         }
+    }
+
+    // We follow precedence rules, so the last way we want to treat an expression is as an equality, and check if we need
+    // to upgrade it to beyond.
+
+    // TODO: Implement Comma Operator
+    private Expr expression() {
+        // After making the AST for the left side, we still need to execute it. Therefore, we
+        // can't drop it, but instead must include it somehow, possible through a binary? Will return to this later
+        Expr expr = ternary();
+
+        if (match(COMMA)) {
+            Token operator = previous();
+            Expr right = expression();
+            expr = new Expr.Binary(expr, operator, right);
+        }
+
+        return expr;
+    }
+
+    // TODO: Implement Ternary Operator
+    private Expr ternary() {
+        Expr expr = equality();
+
+        // Ternaries start with a condition (expr) followed by the true (left) case
+        if (match(QUESTION)) {
+            // We recursively support ternaries on both sides
+            Expr left = ternary();
+
+            // Hence, we expect a colon to separate the true from the false (right) case
+            consume(COLON, "Expect : to complete ternary");
+
+            Expr right = ternary();
+            if (right != null) return new Expr.Ternary(expr, left, right);
+            throw error(peek(), "Expect to complete ternary");
+        }
+
+        return expr;
     }
 
     // Following precedence rules, if we have an expression that is currently marked as an equality, we check if

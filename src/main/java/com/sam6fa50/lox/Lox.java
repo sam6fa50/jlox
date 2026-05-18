@@ -41,11 +41,6 @@ public class Lox {
 
             if (line == null) break;
 
-            // Treat lines ending without semicolons in the REPL as expressions; wrap into statements with print
-            if (line.charAt(line.length() - 1) != ';') {
-                line = "print " + line + ";";
-            }
-
             try {
                 run(line);
             } catch (NullPointerException error) {

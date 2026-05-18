@@ -13,6 +13,7 @@ public class GenerateAst {
             "Ternary  : Expr condition, Expr left, Expr right",
             "Grouping : Expr expression",
             "Literal  : Object value",
+            "Logical  : Token operator, Expr left, Expr right",
             "Unary    : Token operator, Expr right",
             "Variable : Token name"
     );
@@ -20,8 +21,10 @@ public class GenerateAst {
     private static final List<String> Stmts = Arrays.asList(
             "Block      : List<Stmt> statements",
             "Expression : Expr expression",
+            "If         : Expr condition, Stmt thenBranch, Stmt elseBranch",
             "Print      : Expr expression",
-            "Var        : Token name, Expr initializer"
+            "Var        : Token name, Expr initializer",
+            "While      : Expr condition, Stmt body"
     );
 
     static void main(String[] args) throws IOException {
